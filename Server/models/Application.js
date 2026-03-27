@@ -50,6 +50,8 @@ const ApplicationSchema = new mongoose.Schema({
     verifiedBy: { type: String },
     renewalDate: { type: Date },
     certificateUrl: { type: String },
+    certificateIssueDate: { type: Date },
+    verificationQrUrl: { type: String },
     certificateAppeal: {
         reason: { type: String },
         status: { type: String, enum: ['Pending', 'Resolved'] },

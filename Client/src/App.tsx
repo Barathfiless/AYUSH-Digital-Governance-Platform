@@ -35,6 +35,7 @@ import StateStatistics from "@/pages/StateStatistics";
 import ActsAndRules from "@/pages/ActsAndRules";
 import Notifications from "@/pages/Notifications";
 import { Chatbot } from "@/components/common/Chatbot";
+import LicenseVerification from "@/pages/LicenseVerification";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/stats" element={<StateStatistics />} />
           <Route path="/acts" element={<ActsAndRules />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/verify/license/:id" element={<LicenseVerification />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

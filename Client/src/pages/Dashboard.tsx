@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTranslation } from 'react-i18next';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
@@ -38,6 +39,18 @@ export default function Dashboard() {
   const [showRating, setShowRating] = useState(false);
 
   const userData = JSON.parse(sessionStorage.getItem('user') || '{}') || {};
+  const userId = userData?._id || userData?.id;
+
+  // Real-time SSE notifications (replaces polling)
+  useRealtimeNotifications(userId, () => {
+    // Re-fetch applications when a status update arrives
+    if (userId) {
+      fetch(`/api/applications/user/${userId}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setApplications(data); })
+        .catch(() => {});
+    }
+  });
 
   useEffect(() => {
     const fetchUserApplications = async () => {

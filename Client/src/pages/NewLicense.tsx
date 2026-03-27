@@ -327,6 +327,21 @@ export default function NewLicense() {
 
             if (!userId) {
                 toast.error("User session not found. Please login again.");
+                setIsLoading(false);
+                return;
+            }
+
+            // Final safety check for required fields before submission
+            const submissionData = {
+                ...formData,
+                companyName: formData.companyName || userData.name || 'Ayush Startup', // Fallback to avoid 500
+                userId: userId,
+                products: formData.products.filter(p => p.name.trim() !== "") // Clean up any empty product templates
+            };
+
+            if (!submissionData.companyName.trim()) {
+                toast.error("Company Name is required to file a license.");
+                setIsLoading(false);
                 return;
             }
 
@@ -335,11 +350,7 @@ export default function NewLicense() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    ...formData,
-                    products: [], // Send empty products array to avoid validation error on empty fields
-                    userId: userId
-                })
+                body: JSON.stringify(submissionData)
             });
 
             const data = await response.json();

@@ -3,9 +3,14 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
-
 const fs = require('fs');
+const fsAsync = require('fs').promises;
 const path = require('path');
+
+// SSE emitter – may be unavailable during circular-require bootstrap; resolve lazily
+const getSseEmit = () => {
+    try { return require('./events').sseEmit; } catch (_) { return () => {}; }
+};
 
 // Create new application
 router.post('/submit', async (req, res) => {
@@ -20,7 +25,7 @@ router.post('/submit', async (req, res) => {
                 fs.mkdirSync(uploadDir, { recursive: true });
             }
 
-            applicationData.documents = applicationData.documents.map(doc => {
+            applicationData.documents = await Promise.all(applicationData.documents.map(async doc => {
                 // Check if it's a base64 string
                 if (doc.url && typeof doc.url === 'string' && doc.url.startsWith('data:')) {
                     try {
@@ -41,7 +46,8 @@ router.post('/submit', async (req, res) => {
                             const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
                             const filepath = path.join(uploadDir, filename);
 
-                            fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
+                            // Async write – non-blocking
+                            await fsAsync.writeFile(filepath, Buffer.from(base64Data, 'base64'));
 
                             // Success: Replace huge base64 with simple file path
                             doc.url = `/uploads/${filename}`;
@@ -55,6 +61,13 @@ router.post('/submit', async (req, res) => {
                     }
                 }
                 return doc;
+            }));
+        }
+
+        // 🗄️ Sanity check: Ensure required core fields exist before attempting save
+        if (!applicationData.companyName || !applicationData.userId) {
+            return res.status(400).json({ 
+                message: 'Incomplete application dossier (Missing Company Name or User ID)' 
             });
         }
 
@@ -76,7 +89,12 @@ router.post('/submit', async (req, res) => {
         res.status(201).json({ message: 'Application submitted successfully', application: newApplication });
     } catch (error) {
         console.error('Submission error:', error);
-        res.status(500).json({ message: 'Error submitting application', error: error.message });
+        global.lastError = { message: error.message, stack: error.stack, time: new Date() };
+        res.status(500).json({ 
+            message: 'Error submitting application', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
@@ -246,12 +264,23 @@ router.patch('/:id/status', async (req, res) => {
                 message = `Congratulations! Your application for ${application.companyName} has been fully approved. You can now download your license.`;
             }
 
-            await new Notification({
+            const savedNotif = await new Notification({
                 userId: application.userId,
                 title,
                 message,
                 type: 'StatusUpdate'
             }).save();
+
+            // Push real-time SSE event to connected client
+            getSseEmit()(String(application.userId), {
+                type: 'StatusUpdate',
+                title,
+                message,
+                status,
+                applicationId: application.applicationId,
+                companyName: application.companyName,
+                notificationId: savedNotif._id
+            });
         }
 
         res.json(application);
@@ -301,7 +330,7 @@ router.post('/:id/products', async (req, res) => {
                     const filename = `prod-${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
                     const filepath = path.join(uploadDir, filename);
 
-                    fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
+                    await fsAsync.writeFile(filepath, Buffer.from(base64Data, 'base64'));
                     product.image = `/uploads/${filename}`;
                 }
             } catch (err) {

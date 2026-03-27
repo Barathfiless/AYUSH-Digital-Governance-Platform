@@ -3,19 +3,22 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const connectDB = require('./config/db');
+const rateLimit = require('./middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 const path = require('path');
 
-// Middleware
-app.use(cors());
+// Basic remote debugging for 500s
+global.lastError = null;
+
+// ── Middleware ───────────────────────────────────────────────────────────────
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] }));
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// detailed error handler
+// Payload-too-large handler (must come right after body parsers)
 app.use((err, req, res, next) => {
     if (err.type === 'entity.too.large') {
         return res.status(413).json({ message: 'Payload too large (Server Limit)' });
@@ -23,28 +26,34 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/applications', require('./routes/application'));
+// ── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/auth',          rateLimit(15, 100), require('./routes/auth'));
+app.use('/api/applications',  require('./routes/application'));
 app.use('/api/notifications', require('./routes/notification'));
-app.use('/api/sentiment', require('./routes/sentiment'));
-app.use('/api/rag', require('./routes/rag'));
-app.use('/api/reviews', require('./routes/review'));
-app.use('/api/loans', require('./routes/loans'));
-app.use('/api/acts', require('./routes/acts'));
+app.use('/api/sentiment',     require('./routes/sentiment'));
+app.use('/api/rag',           require('./routes/rag'));
+app.use('/api/reviews',       require('./routes/review'));
+app.use('/api/loans',         require('./routes/loans'));
+app.use('/api/acts',          require('./routes/acts'));
+app.use('/api/admin',         require('./routes/admin'));
+app.use('/api/verify',        require('./routes/verify'));
 
-app.get('/', (req, res) => {
-    res.send('AYUSH Gateway API is running');
-});
+// SSE real-time events
+const { router: eventsRouter } = require('./routes/events');
+app.use('/api/events', eventsRouter);
+
+// ── Health & Root ─────────────────────────────────────────────────────────────
+app.get('/', (req, res) => res.send('AYUSH Gateway API is running'));
 
 app.get('/health', (req, res) => {
     res.json({
         server: 'online',
-        database: 'connected'
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
     });
 });
 
-// Start Server after DB connection
+// ── Start Server ─────────────────────────────────────────────────────────────
 const start = async () => {
     try {
         await connectDB();
@@ -58,6 +67,3 @@ const start = async () => {
 };
 
 start();
-
-
-

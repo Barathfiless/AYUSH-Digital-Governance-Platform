@@ -1,0 +1,20 @@
+{
+  "userId": "65f123456789012345678901",
+  "companyName": "Ayush Test Lab",
+  "gstin": "07ABCDE1234F1Z5",
+  "panNumber": "ABCDE1234F",
+  "aadharNumber": "1234 5678 9012",
+  "incorporationDate": "2024-03-27",
+  "founderName": "Ayush Tester",
+  "founderEmail": "tester@ayush.gov.in",
+  "employeeCount": "1-10",
+  "registeredAddress": "Building 5, Delhi",
+  "state": "delhi",
+  "city": "New Delhi",
+  "pinCode": "110001",
+  "bankName": "SBI Bank",
+  "accountNumber": "1234567890",
+  "ifscCode": "SBIN0000001",
+  "documents": [],
+  "products": []
+}

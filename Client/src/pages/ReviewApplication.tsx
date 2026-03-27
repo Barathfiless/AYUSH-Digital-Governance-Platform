@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { AiVerificationWidget } from '@/components/common/AiVerificationWidget';
 
 export default function ReviewApplication() {
     usePageTitle('Review Application');
@@ -285,6 +286,9 @@ export default function ReviewApplication() {
                         </div>
 
                         <div className="space-y-8">
+                            {/* AI Verification Widget */}
+                            {id && <AiVerificationWidget applicationId={id} />}
+
                             {/* Status Card */}
                             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
                                 <h3 className="font-bold text-slate-800 mb-6 text-sm uppercase tracking-wider border-b border-slate-100 pb-4">Verification Status</h3>

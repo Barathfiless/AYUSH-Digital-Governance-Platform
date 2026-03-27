@@ -258,6 +258,19 @@ const ApplicationsModule = ({ status, applications, searchQuery, setSearchQuery,
 const ApprovalDocsModule = ({ applications, onPostCertificate }: { applications: any[], onPostCertificate: (app: any) => void }) => {
   const [certTab, setCertTab] = useState<'awaiting' | 'posted'>('awaiting');
   const [localSearch, setLocalSearch] = useState("");
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
+
+  const handleAutoGenerate = async (appId: string) => {
+    setIsGenerating(appId);
+    try {
+      const res = await fetch(`/api/admin/generate-certificate/${appId}`, { method: 'POST' });
+      if (res.ok) {
+        toast.success("Verifiable license generated successfully!");
+        window.location.reload(); 
+      }
+    } catch (e) { toast.error("Generation failed"); }
+    finally { setIsGenerating(null); }
+  };
 
   const approvedApps = applications.filter(app => app.status === 'Approved');
   const filteredApps = approvedApps.filter(app => {
@@ -365,9 +378,21 @@ const ApprovalDocsModule = ({ applications, onPostCertificate }: { applications:
                       size="sm"
                       className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest text-[#002b5b] hover:text-blue-700 hover:bg-blue-50 gap-2 border border-slate-100 shadow-sm"
                     >
-                      {app.certificateUrl ? 'Update Cert' : 'Post Certificate'}
+                      {app.certificateUrl ? 'Edit URL' : 'Manual Link'}
                       <PlusCircle className="w-3 h-3" />
                     </Button>
+                    {!app.certificateUrl && (
+                       <Button
+                        onClick={() => handleAutoGenerate(app._id)}
+                        disabled={!!isGenerating}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 gap-2 border border-blue-100 shadow-sm"
+                      >
+                        {isGenerating === app._id ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Zap className="w-3 h-3 text-amber-300 fill-amber-300/20" />}
+                        Auto-Generate
+                      </Button>
+                    )}
                     {app.certificateUrl && (
                       <Button
                         variant="ghost"
