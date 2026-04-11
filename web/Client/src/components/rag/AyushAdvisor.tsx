@@ -26,8 +26,6 @@ export function AyushAdvisor() {
     const isOfficerPortal = /^\/officer/.test(location.pathname);
 
     const [isOpen, setIsOpen] = useState(false);
-
-    if (isOfficerPortal) return null;
     const [query, setQuery] = useState('');
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -53,6 +51,8 @@ export function AyushAdvisor() {
             bottomRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages]);
+
+    if (isOfficerPortal) return null;
 
     const sendMessage = async (text?: string) => {
         const userText = (text || query).trim();
