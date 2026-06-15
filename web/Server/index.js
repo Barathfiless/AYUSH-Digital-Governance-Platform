@@ -43,7 +43,12 @@ const { router: eventsRouter } = require('./routes/events');
 app.use('/api/events', eventsRouter);
 
 // ── Health & Root ─────────────────────────────────────────────────────────────
-app.get('/', (req, res) => res.send('AYUSH Gateway API is running'));
+app.get('/', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.sendFile(path.join(__dirname, '../Client/dist/index.html'));
+    }
+    res.send('AYUSH Gateway API is running');
+});
 
 app.get('/health', (req, res) => {
     res.json({
@@ -52,6 +57,20 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+
+// ── Serve Frontend in Production ──────────────────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../Client/dist')));
+    
+    // Wildcard route to serve the React app index.html for client-side routing
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+            res.sendFile(path.join(__dirname, '../Client/dist/index.html'));
+        } else {
+            res.status(404).json({ message: 'API Route Not Found' });
+        }
+    });
+}
 
 // ── Start Server ─────────────────────────────────────────────────────────────
 const start = async () => {

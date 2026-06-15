@@ -954,10 +954,7 @@ export default function OfficerDashboard() {
 
   const fetchApplications = async () => {
     try {
-      let response = await fetch('/api/applications/all');
-      if (!response.ok && response.status === 404) {
-        response = await fetch('http://localhost:5000/api/applications/all');
-      }
+      const response = await fetch('/api/applications/all');
       const data = await response.json();
       if (response.ok) {
         setApplications(data);
