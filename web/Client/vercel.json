@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://ayush-backend.onrender.com/api/:path*"
+      "destination": "https://ayush-startup-barath.onrender.com/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://ayush-backend.onrender.com/uploads/:path*"
+      "destination": "https://ayush-startup-barath.onrender.com/uploads/:path*"
     },
     {
       "source": "/(index.html)?",

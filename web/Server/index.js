@@ -8,6 +8,7 @@ const rateLimit = require('./middleware/rateLimit');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const path = require('path');
+const fs = require('fs');
 
 // Basic remote debugging for 500s
 global.lastError = null;
@@ -42,13 +43,26 @@ app.use('/api/verify',        require('./routes/verify'));
 const { router: eventsRouter } = require('./routes/events');
 app.use('/api/events', eventsRouter);
 
-// ── Health & Root ─────────────────────────────────────────────────────────────
-app.get('/', (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
-        return res.sendFile(path.join(__dirname, '../Client/dist/index.html'));
-    }
-    res.send('AYUSH Gateway API is running');
-});
+// ── Serve Frontend / Health & Root ─────────────────────────────────────────────
+const frontendBuildPath = path.join(__dirname, '../Client/dist');
+
+if (process.env.NODE_ENV === 'production' && fs.existsSync(path.join(frontendBuildPath, 'index.html'))) {
+    app.use(express.static(frontendBuildPath));
+    
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(frontendBuildPath, 'index.html'));
+    });
+    
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api')) {
+            res.sendFile(path.join(frontendBuildPath, 'index.html'));
+        } else {
+            res.status(404).json({ message: 'API Route Not Found' });
+        }
+    });
+} else {
+    app.get('/', (req, res) => res.send('AYUSH Gateway API is running'));
+}
 
 app.get('/health', (req, res) => {
     res.json({
@@ -57,20 +71,6 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
-
-// ── Serve Frontend in Production ──────────────────────────────────────────────
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../Client/dist')));
-    
-    // Wildcard route to serve the React app index.html for client-side routing
-    app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-            res.sendFile(path.join(__dirname, '../Client/dist/index.html'));
-        } else {
-            res.status(404).json({ message: 'API Route Not Found' });
-        }
-    });
-}
 
 // ── Start Server ─────────────────────────────────────────────────────────────
 const start = async () => {
