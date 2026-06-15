@@ -106,6 +106,10 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
+        if (user.role === 'admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts must log in via Google Sign-In' });
+        }
+
         // Check if password matches
         const isMatch = await user.matchPassword(password);
 
