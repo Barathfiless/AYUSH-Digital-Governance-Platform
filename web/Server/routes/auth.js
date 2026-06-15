@@ -135,6 +135,86 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Google Auth route (Login / Register for Admin)
+router.post('/google', async (req, res) => {
+    try {
+        const { email, name, phone, role, mode } = req.body;
+
+        if (!email || role !== 'admin') {
+            return res.status(400).json({ success: false, message: 'Invalid request parameters' });
+        }
+
+        // Find existing user
+        let user = await User.findOne({ email });
+
+        if (mode === 'login') {
+            if (!user) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'No admin account found with this Google email. Please register first.' 
+                });
+            }
+            if (user.role !== 'admin') {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'This email is registered under a different role.' 
+                });
+            }
+        } else if (mode === 'register') {
+            if (user) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'This email is already registered.' 
+                });
+            }
+
+            // Generate secure random password
+            const password = Math.random().toString(36).substring(2, 15) + "A1!";
+            
+            // Generate phone if not provided, ensuring format fits
+            const resolvedPhone = phone || ("+91" + Math.floor(1000000000 + Math.random() * 9000000000));
+
+            // Check if phone already exists
+            const existingPhone = await User.findOne({ phone: resolvedPhone });
+            if (existingPhone) {
+                return res.status(400).json({ success: false, message: 'Generated phone number collision. Please try again.' });
+            }
+
+            user = await User.create({
+                name: name || 'Google Admin',
+                email,
+                phone: resolvedPhone,
+                password,
+                role: 'admin'
+            });
+        } else {
+            return res.status(400).json({ success: false, message: 'Invalid mode' });
+        }
+
+        // Generate JWT token
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            },
+            token
+        });
+    } catch (error) {
+        console.error('Google auth error:', error);
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ success: false, message: messages.join(', ') });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
+    }
+});
+
 // Get user profile
 router.get('/profile', async (req, res) => {
     try {
