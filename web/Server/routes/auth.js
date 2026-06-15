@@ -144,30 +144,17 @@ router.post('/google', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid request parameters' });
         }
 
+        if (email.toLowerCase() !== 'barathfiless@gmail.com') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Access Denied: Only barathfiless@gmail.com is authorized to access the Admin role.' 
+            });
+        }
+
         // Find existing user
         let user = await User.findOne({ email });
 
-        if (mode === 'login') {
-            if (!user) {
-                return res.status(404).json({ 
-                    success: false, 
-                    message: 'No admin account found with this Google email. Please register first.' 
-                });
-            }
-            if (user.role !== 'admin') {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: 'This email is registered under a different role.' 
-                });
-            }
-        } else if (mode === 'register') {
-            if (user) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'This email is already registered.' 
-                });
-            }
-
+        if (!user) {
             // Generate secure random password
             const password = Math.random().toString(36).substring(2, 15) + "A1!";
             
@@ -177,7 +164,7 @@ router.post('/google', async (req, res) => {
             // Check if phone already exists
             const existingPhone = await User.findOne({ phone: resolvedPhone });
             if (existingPhone) {
-                return res.status(400).json({ success: false, message: 'Generated phone number collision. Please try again.' });
+                return res.status(400).json({ success: false, message: 'Phone number collision. Please try again.' });
             }
 
             user = await User.create({
@@ -187,8 +174,11 @@ router.post('/google', async (req, res) => {
                 password,
                 role: 'admin'
             });
-        } else {
-            return res.status(400).json({ success: false, message: 'Invalid mode' });
+        } else if (user.role !== 'admin') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'This email is registered under a different role.' 
+            });
         }
 
         // Generate JWT token
